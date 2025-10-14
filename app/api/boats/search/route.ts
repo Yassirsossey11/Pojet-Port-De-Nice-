@@ -19,10 +19,10 @@ export async function GET(request: NextRequest) {
     const bateaux = await prisma.bateau.findMany({
       where: {
         OR: [
-          { numeroSerie: { contains: query, mode: 'insensitive' } },
-          { nomBateau: { contains: query, mode: 'insensitive' } },
-          { pavillon: { contains: query, mode: 'insensitive' } },
-          { typeBateau: { contains: query, mode: 'insensitive' } },
+          { numeroSerie: { contains: query } },
+          { nomBateau: { contains: query } },
+          { pavillon: { contains: query } },
+          { typeBateau: { contains: query } },
         ],
       },
       include: {
