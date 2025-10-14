@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Bateau (Master data)
+model Bateau {
+  id            String        @id @default(cuid())
+  numeroSerie   String        @unique @map("numero_serie")
+  nomBateau     String        @map("nom_bateau")
+  pavillon      String?       // Nationalité/drapeau
+  typeBateau    String?       @map("type_bateau")
+  capacite      Int?
+  longueur      Float?        // En mètres
+  remarques     String?
+  
+  // Relations
+  mouvements    Movement[]
+  
+  // Audit
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  createdBy     String?       @map("created_by")  // userId si auth
+  
+  @@map("bateaux")
+  @@index([numeroSerie])
+  @@index([nomBateau])
+}
+
+// Mouvement (arrival/departure tracking)
+model Movement {
+  id            String          @id @default(cuid())
+  
+  // Relation avec le bateau
+  bateauId      String          @map("bateau_id")
+  bateau        Bateau          @relation(fields: [bateauId], references: [id], onDelete: Cascade)
+  
+  // Type de mouvement (ARRIVEE ou DEPART - stocké comme String)
+  type          String          // "ARRIVEE" | "DEPART"
+  
+  // Dates (stockées en UTC)
+  arrivalAt     DateTime?       @map("arrival_at")
+  departureAt   DateTime?       @map("departure_at")
+  
+  // Détails
+  berth         String?         // Poste d'amarrage (ex: A12, B5)
+  source        String          @default("MANUAL") // "MANUAL" | "API" | "SCAN" | "IMPORT"
+  notes         String?
+  
+  // Statut actuel (déduit des dates)
+  isActive      Boolean         @default(true) @map("is_active")  // false si départ enregistré
+  
+  // Audit
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  createdBy     String?         @map("created_by")
+  updatedBy     String?         @map("updated_by")
+  
+  @@map("movements")
+  @@index([bateauId])
+  @@index([isActive])
+  @@index([arrivalAt])
+  @@index([departureAt])
+  @@index([createdAt])
+}
+
+// Audit log (optionnel, pour tracer toutes les actions)
+model AuditLog {
+  id            String    @id @default(cuid())
+  action        String    // CREATE, UPDATE, DELETE, ARRIVAL, DEPARTURE
+  entity        String    // Bateau, Movement
+  entityId      String    @map("entity_id")
+  changes       String?   // Détails des changements (stocké en JSON string)
+  userId        String?   @map("user_id")
+  ipAddress     String?   @map("ip_address")
+  userAgent     String?   @map("user_agent")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  @@map("audit_logs")
+  @@index([entityId])
+  @@index([createdAt])
+  @@index([userId])
+}
